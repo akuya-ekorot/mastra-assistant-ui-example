@@ -1,0 +1,30 @@
+{
+  "name": "mastra-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "mastra dev",
+    "build": "mastra build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.2.11",
+    "@mastra/core": "0.9.4-alpha.4",
+    "@mastra/libsql": "0.0.4-alpha.4",
+    "@mastra/memory": "0.3.4-alpha.4",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "mastra": "0.6.3-alpha.6",
+    "typescript": "^5.8.3"
+  }
+}
