@@ -1,0 +1,3 @@
+onlyBuiltDependencies:
+  - onnxruntime-node
+  - protobufjs
