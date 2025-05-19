@@ -1,7 +1,5 @@
 "use client";
 
-import { AssistantRuntimeProvider, useThreadList } from "@assistant-ui/react";
-import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
 import { Thread } from "@/components/assistant-ui/thread";
 import {
 	SidebarInset,
@@ -22,9 +20,9 @@ import { WeatherToolUI } from "@/components/custom/weather-tool-ui";
 import { ScratchComponent } from "@/components/custom/scratch-component";
 import { MastraRuntimeProvider } from "@/components/custom/MastraRuntimeProvider";
 
-export const Assistant = () => {
+export const Assistant = ({ threadId }: { threadId?: string }) => {
 	return (
-		<MastraRuntimeProvider>
+		<MastraRuntimeProvider threadId={threadId}>
 			<SidebarProvider>
 				<AppSidebar />
 				<SidebarInset>

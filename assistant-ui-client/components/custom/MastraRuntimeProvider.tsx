@@ -7,9 +7,10 @@ import {
 import { useMastraStoreAdapter } from "@/hooks/use-mastra-store-adapter";
 
 export const MastraRuntimeProvider = ({
+	threadId,
 	children,
-}: { children: React.ReactNode }) => {
-	const mastraAdapter = useMastraStoreAdapter();
+}: { threadId?: string; children: React.ReactNode }) => {
+	const mastraAdapter = useMastraStoreAdapter(threadId);
 	const runtime = useExternalStoreRuntime(mastraAdapter);
 
 	return (

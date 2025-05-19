@@ -3,7 +3,6 @@ import type {
 	AppendMessage,
 	CreateStartRunConfig,
 	ExternalStoreMessageConverter,
-	ExternalStoreThreadListAdapter,
 	ThreadMessageLike,
 } from "@assistant-ui/react";
 import type { CoreMessage } from "@mastra/core";
@@ -17,6 +16,7 @@ import type {
 import { useCallback, useState } from "react";
 import { MASTRA_AGENT_ID, useMastraClient } from "./use-mastra-client";
 import { useMastraThreadListAdapter } from "./use-mastra-threadlist-adapter";
+import { updateTextParts } from "@/lib/utils";
 
 const convertAssistantUIMessageToMastraMessage = (
 	message: AppendMessage,
@@ -56,7 +56,7 @@ const convertAssistantUIMessageToMastraMessage = (
 	}
 };
 
-export const useMastraStoreAdapter = () => {
+export const useMastraStoreAdapter = (threadId?: string) => {
 	const [isDisabled, setIsDisabled] = useState(false);
 	const [isRunning, setIsRunning] = useState(false);
 	const [messages, setMessages] = useState<readonly CoreMessage[]>([]);
@@ -72,6 +72,8 @@ export const useMastraStoreAdapter = () => {
 		setIsDisabled(false);
 		return errorObj;
 	}, []);
+
+	const updateMessageContent = useCallback(() => {}, []);
 
 	const onNew = useCallback(
 		async (message: AppendMessage) => {
@@ -93,7 +95,7 @@ export const useMastraStoreAdapter = () => {
 				// get stream response from mastra
 				const response = await agent.stream({
 					messages: [userMessage],
-					threadId: "default-thread",
+					threadId: threadId ?? "default-thread",
 					resourceId: "default-resource",
 				});
 
@@ -109,38 +111,17 @@ export const useMastraStoreAdapter = () => {
 							const lastMessageIndex = updatedMessages.length - 1;
 							const assistantMessage = updatedMessages[lastMessageIndex];
 
-							if (
-								assistantMessage &&
-								assistantMessage.role === "assistant" &&
-								Array.isArray(assistantMessage.content)
-							) {
-								const updatedContent = [];
-								let textPartFound = false;
+							const updatedContent = updateTextParts(
+								assistantMessage.content,
+								text,
+							);
 
-								for (const part of assistantMessage.content) {
-									if (part.type === "text") {
-										textPartFound = true;
-										updatedContent.push({
-											...part,
-											text: assistantMessageText,
-										});
-										continue;
-									}
-									updatedContent.push(part);
-								}
+							updatedMessages[lastMessageIndex] = {
+								...assistantMessage,
+								content: updatedContent,
+							};
 
-								if (!textPartFound) {
-									updatedContent.push({
-										type: "text" as const,
-										text: assistantMessageText,
-									});
-								}
-
-								updatedMessages[lastMessageIndex] = {
-									...assistantMessage,
-									content: updatedContent,
-								};
-							}
+							console.log({ updatedMessages });
 
 							return updatedMessages;
 						});
@@ -275,7 +256,7 @@ export const useMastraStoreAdapter = () => {
 				setIsDisabled(false);
 			}
 		},
-		[agent.stream, handleError],
+		[agent.stream, handleError, threadId],
 	);
 
 	const convertMessage: ExternalStoreMessageConverter<CoreMessage> =
@@ -309,7 +290,7 @@ export const useMastraStoreAdapter = () => {
 		onCancel,
 		onReload,
 		adapters: {
-			threadList: useMastraThreadListAdapter("default-thread"),
+			threadList: useMastraThreadListAdapter(threadId ?? "default-thread"),
 		},
 	};
 };
