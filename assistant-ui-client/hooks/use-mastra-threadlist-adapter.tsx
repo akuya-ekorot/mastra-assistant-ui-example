@@ -3,7 +3,6 @@ import type {
 	ExternalStoreThreadListAdapter,
 } from "@assistant-ui/react";
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { MASTRA_AGENT_ID, useMastraClient } from "./use-mastra-client";
 
 export const useMastraThreadListAdapter = (

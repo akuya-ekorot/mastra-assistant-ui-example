@@ -1,0 +1,25 @@
+{
+	"name": "@mastra/assistant-ui",
+	"version": "1.0.0",
+	"description": "",
+	"type": "module",
+	"scripts": {
+		"dev": "tsup --watch",
+		"build": "tsup"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"packageManager": "pnpm@10.11.0",
+	"devDependencies": {
+		"@types/react": "^19.1.4",
+		"tsup": "^8.5.0",
+		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"@assistant-ui/react": "^0.10.7",
+		"@mastra/client-js": "^0.1.22",
+		"@mastra/core": "^0.9.4",
+		"react": "^19.1.0"
+	}
+}
