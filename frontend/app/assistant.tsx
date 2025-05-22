@@ -1,7 +1,6 @@
 "use client";
 
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
-import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
 import { Thread } from "@/components/assistant-ui/thread";
 import {
 	SidebarInset,
@@ -23,6 +22,16 @@ import { WeatherToolUI } from "@/components/custom/weather-tool-ui";
 import { useState } from "react";
 
 export const Assistant = () => {
+	/**
+	 * TODO: Global way to set the resourceId and the agentID
+	 * - agentId could be set as a config
+	 * - resourceId could be dynamically set. e.g userId from authentication mechanisms
+	 */
+
+	/**
+	 * TODO: ThreadId could be set dynamically once threads are fetched, or left undefined for a newThread
+	 * disable messages fetching if threadId is undefined
+	 */
 	const [threadId, setThreadId] = useState("default");
 
 	const runtime = useMastraRuntime({
