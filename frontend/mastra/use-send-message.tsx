@@ -55,14 +55,37 @@ export const useSendMessage = (args: UseSendMessageArgs) => {
 	const client = useMastraClient();
 	const agent = client.getAgent(args.config.agentId);
 
+	const fetchMessages = useCallback(async () => {
+		try {
+			const messages = await client
+				.getMemoryThread(args.config.threadId, args.config.agentId)
+				.getMessages();
+			setMessages(coreMessagesToModifiedCoreMessages(messages.messages));
+		} catch (error) {
+			if (error instanceof Error) {
+				if (error.message.includes("Thread not found")) {
+					await client.createMemoryThread({
+						threadId: args.config.threadId,
+						title: "",
+						resourceId: args.config.resourceId,
+						metadata: {},
+						agentId: args.config.agentId,
+					});
+
+					fetchMessages();
+				}
+			}
+		}
+	}, [
+		client,
+		args.config.agentId,
+		args.config.threadId,
+		args.config.resourceId,
+	]);
+
 	useEffect(() => {
-		client
-			.getMemoryThread(args.config.threadId, args.config.agentId)
-			.getMessages()
-			.then((messages) => {
-				setMessages(coreMessagesToModifiedCoreMessages(messages.messages));
-			});
-	}, [client, args.config.threadId, args.config.agentId]);
+		fetchMessages();
+	}, [fetchMessages]);
 
 	const sendMessage = useCallback(
 		async (message: AppendMessage) => {

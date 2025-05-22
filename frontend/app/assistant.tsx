@@ -20,9 +20,17 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useMastraRuntime } from "@/mastra/use-mastra-runtime";
 import { WeatherToolUI } from "@/components/custom/weather-tool-ui";
+import { useState } from "react";
 
 export const Assistant = () => {
-	const runtime = useMastraRuntime();
+	const [threadId, setThreadId] = useState("default");
+
+	const runtime = useMastraRuntime({
+		agentId: "mastraAgent",
+		resourceId: "new-default-resource",
+		threadId,
+		setThreadId,
+	});
 
 	return (
 		<AssistantRuntimeProvider runtime={runtime}>

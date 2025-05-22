@@ -2,21 +2,30 @@ import { useExternalStoreRuntime } from "@assistant-ui/react";
 import { useSendMessage } from "./use-send-message";
 import { coreMessageToThreadMessageLike } from "./converters";
 import { useMastraThreadList } from "./use-mastra-threadlist";
+import { useState } from "react";
 
-export const useMastraRuntime = () => {
+export interface UseMastraRuntimeArgs {
+	agentId: string;
+	resourceId: string;
+	threadId: string;
+	setThreadId(threadId: string): void;
+}
+
+export const useMastraRuntime = (args: UseMastraRuntimeArgs) => {
 	const { messages, setMessages, sendMessage, isRunning, isDisabled } =
 		useSendMessage({
 			config: {
-				agentId: "mastraAgent",
-				resourceId: "new-default-resource",
-				threadId: "new-default-thread",
+				agentId: args.agentId,
+				resourceId: args.resourceId,
+				threadId: args.threadId,
 			},
 		});
 
 	const threadList = useMastraThreadList({
-		agentId: "mastraAgent",
-		threadId: "new-default-thread",
-		resourceId: "new-default-resource",
+		agentId: args.agentId,
+		threadId: args.threadId,
+		resourceId: args.resourceId,
+		setThreadId: args.setThreadId,
 	});
 
 	return useExternalStoreRuntime({
