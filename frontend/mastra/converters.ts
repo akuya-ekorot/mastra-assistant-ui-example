@@ -5,7 +5,6 @@ import type {
 	ReasoningContentPart,
 	TextContentPart,
 	ThreadMessageLike,
-	ToolCallContentPart,
 } from "@assistant-ui/react";
 import type {
 	CoreAssistantMessage,
@@ -36,7 +35,7 @@ export type ReadonlyJSONArray = readonly ReadonlyJSONValue[];
 type AppendMessagePartsToCoreMessagePartsResult = Extract<
 	CoreMessage["content"],
 	unknown[]
->;
+>[number][];
 
 const appendMessagePartsToCoreMessageParts = (
 	parts: AppendMessage["content"],
@@ -100,13 +99,11 @@ export const appendMessageToCoreMessage = (
 };
 
 const coreMessagePartsToThreadMessageLikeParts = (
-	parts: CoreMessage["content"],
+	parts: ModifiedCoreMessage["content"],
 ): ThreadMessageLike["content"] => {
 	if (typeof parts === "string") {
 		return [{ type: "text", text: parts }];
 	}
-
-	const toolCallsArgsMap = new Map<string, ReadonlyJSONObject>();
 
 	return parts.map((part) => {
 		switch (part.type) {
@@ -137,34 +134,20 @@ const coreMessagePartsToThreadMessageLikeParts = (
 					text: part.data,
 				} satisfies ReasoningContentPart;
 			case "tool-call": {
-				toolCallsArgsMap.set(part.toolCallId, part.args as ReadonlyJSONObject);
 				return {
-					type: part.type,
+					...part,
 					args: part.args as ReadonlyJSONObject,
-					argsText: JSON.stringify(part.args),
-					toolCallId: part.toolCallId,
-					toolName: part.toolName,
-				} satisfies ToolCallContentPart;
+				};
 			}
 			case "tool-result": {
-				const args = toolCallsArgsMap.get(part.toolCallId) ?? {};
-
-				return {
-					type: "tool-call",
-					toolCallId: part.toolCallId,
-					toolName: part.toolName,
-					args,
-					argsText: JSON.stringify(args),
-					result: part.result,
-					isError: part.isError,
-				} satisfies ToolCallContentPart;
+				throw new Error("tool-result case shouldn't happen");
 			}
 		}
 	});
 };
 
 export const coreMessageToThreadMessageLike = (
-	message: CoreMessage,
+	message: ModifiedCoreMessage,
 ): ThreadMessageLike => {
 	switch (message.role) {
 		case "system":
@@ -177,11 +160,92 @@ export const coreMessageToThreadMessageLike = (
 				role: "user",
 				content: coreMessagePartsToThreadMessageLikeParts(message.content),
 			};
-		case "tool":
 		case "assistant":
 			return {
 				role: "assistant",
 				content: coreMessagePartsToThreadMessageLikeParts(message.content),
+				status: message.status,
 			};
+		case "tool":
+			throw new Error("tool case shouldn't happen after conversion");
 	}
+};
+
+export const coreMessagesToModifiedCoreMessages = (
+	messages: CoreMessage[],
+): ModifiedCoreMessage[] => {
+	const toolCallsMap = new Map<
+		string,
+		{ toolCall: ToolCallPart; partIndex: number; messageIndex: number }
+	>();
+	const modifiedCoreMessages: ModifiedCoreMessage[] = [];
+
+	for (const message of messages) {
+		if (message.role !== "assistant" && message.role !== "tool") {
+			modifiedCoreMessages.push(message);
+			continue;
+		}
+
+		if (message.role === "assistant") {
+			if (typeof message.content === "string") {
+				const updatedPart = {
+					type: "text" as const,
+					text: message.content,
+				};
+
+				modifiedCoreMessages.push({
+					...message,
+					content: [updatedPart],
+				});
+
+				continue;
+			}
+
+			modifiedCoreMessages.push(message);
+
+			for (const part of message.content) {
+				if (part.type === "tool-call") {
+					toolCallsMap.set(part.toolCallId, {
+						toolCall: part,
+						partIndex: message.content.indexOf(part),
+						messageIndex: modifiedCoreMessages.length - 1,
+					});
+				}
+			}
+		}
+
+		if (message.role === "tool") {
+			for (const part of message.content) {
+				const toolDetails = toolCallsMap.get(part.toolCallId);
+
+				if (!toolDetails) continue;
+
+				const updatedToolCall = {
+					...toolDetails.toolCall,
+					argsText: JSON.stringify(toolDetails.toolCall.args),
+					result: part.result,
+					isError: part.isError,
+				};
+
+				const assistantMessage = modifiedCoreMessages[toolDetails.messageIndex];
+
+				if (
+					assistantMessage?.role !== "assistant" ||
+					typeof assistantMessage?.content === "string"
+				) {
+					continue;
+				}
+
+				assistantMessage.content.splice(
+					toolDetails.partIndex,
+					1,
+					updatedToolCall,
+				);
+
+				toolCallsMap.delete(part.toolCallId);
+			}
+		}
+	}
+
+	return modifiedCoreMessages;
 };

@@ -3,6 +3,8 @@ import type {
 	ModifiedAssistantContent,
 	ModifiedCoreMessage,
 } from "./use-send-message";
+import type { ToolCallContentPart } from "@assistant-ui/react";
+import type { ReadonlyJSONObject } from "./converters";
 
 export const handleOnTextPart = (
 	text: string,
@@ -60,12 +62,29 @@ export const handleOnTextPart = (
 			{
 				role: "assistant",
 				content: [{ type: "text", text }],
+				status: { type: "running" },
 			},
 		];
 	}
 
-	return [{ role: "assistant", content: [{ type: "text", text }] }];
+	return [
+		{
+			role: "assistant",
+			content: [{ type: "text", text }],
+			status: { type: "running" },
+		},
+	];
 };
+
+const createToolCallPart = (
+	toolCall: ToolCall<string, unknown>,
+): ToolCallContentPart => ({
+	type: "tool-call",
+	args: toolCall.args as ReadonlyJSONObject,
+	argsText: JSON.stringify(toolCall.args),
+	toolName: toolCall.toolName,
+	toolCallId: toolCall.toolCallId,
+});
 
 export const handleOnToolCallPart = (
 	toolCall: ToolCall<string, unknown>,
@@ -79,12 +98,7 @@ export const handleOnToolCallPart = (
 				type: "text",
 				text: lastMessage.content,
 			};
-			const newToolCallPart = {
-				type: "tool-call",
-				args: toolCall.args,
-				toolCallId: toolCall.toolCallId,
-				toolName: toolCall.toolName,
-			} satisfies ToolCallPart;
+			const newToolCallPart = createToolCallPart(toolCall);
 
 			const updatedContent = [updatedTextPart, newToolCallPart];
 
@@ -98,7 +112,7 @@ export const handleOnToolCallPart = (
 			...messages.slice(0, -1),
 			{
 				...lastMessage,
-				content: [...lastMessage.content, { ...toolCall, type: "tool-call" }],
+				content: [...lastMessage.content, createToolCallPart(toolCall)],
 			},
 		];
 	}
@@ -106,7 +120,8 @@ export const handleOnToolCallPart = (
 	return [
 		{
 			role: "assistant",
-			content: [{ ...toolCall, type: "tool-call" }],
+			content: [createToolCallPart(toolCall)],
+			status: { type: "running" },
 		},
 	];
 };
@@ -123,21 +138,20 @@ export const handleOnToolResultPart = (
 
 	if (typeof lastMessage.content === "string") return messages;
 
-	const toolCall = lastMessage.content.find(
-		(p) => p.type === "tool-call" && p.toolCallId === toolResult.toolCallId,
-	);
-
 	const toolCallIndex = lastMessage.content.findIndex(
 		(p) => p.type === "tool-call" && p.toolCallId === toolResult.toolCallId,
 	);
 
-	if (!toolCall || toolCall.type !== "tool-call") return messages;
+	if (toolCallIndex === -1) return messages;
+	const existingToolCall = lastMessage.content[toolCallIndex];
+
+	// type guard
+	if (existingToolCall.type !== "tool-call") return messages;
 
 	const updatedToolCall = {
-		...toolCall,
-		type: "tool-call" as const,
-		toolCallId: toolResult.toolCallId,
+		...existingToolCall,
 		result: toolResult.result,
+		isError: false,
 	} satisfies Extract<ModifiedAssistantContent, unknown[]>[number];
 
 	return [

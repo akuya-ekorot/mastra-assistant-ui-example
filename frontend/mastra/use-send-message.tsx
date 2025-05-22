@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMastraClient } from "./use-mastra-client";
 import type {
 	CoreAssistantMessage,
@@ -6,8 +6,11 @@ import type {
 	ToolCallPart,
 	ToolResultPart,
 } from "ai";
-import { useContentPartRuntime, type AppendMessage } from "@assistant-ui/react";
-import { appendMessageToCoreMessage } from "./converters";
+import type { MessageStatus, AppendMessage } from "@assistant-ui/react";
+import {
+	appendMessageToCoreMessage,
+	coreMessagesToModifiedCoreMessages,
+} from "./converters";
 import {
 	handleOnTextPart,
 	handleOnToolCallPart,
@@ -39,15 +42,29 @@ type ModifiedCoreAssistantMessage = Omit<
 > & {
 	content: ModifiedAssistantContent;
 };
-export type ModifiedCoreMessage =
+export type ModifiedCoreMessage = (
 	| Extract<CoreMessage, { role: "user" | "system" | "tool" }>
-	| ModifiedCoreAssistantMessage;
+	| ModifiedCoreAssistantMessage
+) & { status?: MessageStatus };
 
 export const useSendMessage = (args: UseSendMessageArgs) => {
 	const [messages, setMessages] = useState<ModifiedCoreMessage[]>([]);
+	const [isRunning, setIsRunning] = useState(false);
+	const [isDisabled, setIsDisabled] = useState(false);
 
 	const client = useMastraClient();
 	const agent = client.getAgent(args.config.agentId);
+
+	console.log("messages", messages);
+
+	useEffect(() => {
+		client
+			.getMemoryThread(args.config.threadId, args.config.agentId)
+			.getMessages()
+			.then((messages) => {
+				setMessages(coreMessagesToModifiedCoreMessages(messages.messages));
+			});
+	}, [client, args.config.threadId, args.config.agentId]);
 
 	const sendMessage = useCallback(
 		async (message: AppendMessage) => {
@@ -55,6 +72,8 @@ export const useSendMessage = (args: UseSendMessageArgs) => {
 
 			setMessages((prev) => [...prev, userMessage]);
 
+			setIsRunning(true);
+			setIsDisabled(true);
 			const stream = await agent.stream({
 				messages: [userMessage],
 				resourceId: args.config.resourceId,
@@ -72,7 +91,18 @@ export const useSendMessage = (args: UseSendMessageArgs) => {
 					console.warn("onFilePart not implemented", streamPart);
 				},
 				onFinishMessagePart(streamPart) {
-					console.warn("onFinishMessagePart not implemented", streamPart);
+					setMessages((prev) => [
+						...prev.slice(0, -1),
+						{
+							...prev[prev.length - 1],
+							status: {
+								type: "complete",
+								reason: streamPart.finishReason === "stop" ? "stop" : "unknown",
+							},
+						},
+					]);
+					setIsRunning(false);
+					setIsDisabled(false);
 				},
 				onFinishStepPart(streamPart) {
 					console.warn("onFinishStepPart not implemented", streamPart);
@@ -124,5 +154,7 @@ export const useSendMessage = (args: UseSendMessageArgs) => {
 		messages,
 		setMessages,
 		sendMessage,
+		isRunning,
+		isDisabled,
 	};
 };

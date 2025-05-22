@@ -11,13 +11,11 @@ export const WeatherToolUI = makeAssistantToolUI<
 	WeatherToolResult
 >({
 	toolName: "getWeather",
-	render: ({ args, status, result }) => {
-		console.log("WeatherToolUI", args, status, result);
-
+	render: ({ args, argsText, status, result }) => {
 		let innerPart: React.ReactNode = null;
 		switch (status.type) {
 			case "running":
-				innerPart = <div>Running with args: {JSON.stringify(args)}</div>;
+				innerPart = <div>Running with args: {argsText}</div>;
 				break;
 			case "complete":
 				innerPart = <div>{result}</div>;
