@@ -55,8 +55,6 @@ export const useSendMessage = (args: UseSendMessageArgs) => {
 	const client = useMastraClient();
 	const agent = client.getAgent(args.config.agentId);
 
-	console.log("messages", messages);
-
 	useEffect(() => {
 		client
 			.getMemoryThread(args.config.threadId, args.config.agentId)

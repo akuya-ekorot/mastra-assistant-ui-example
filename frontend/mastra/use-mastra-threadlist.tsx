@@ -23,7 +23,6 @@ export const useMastraThreadList = (
 	>([]);
 
 	const client = useMastraClient({ baseUrl: args.baseUrl });
-	const agent = client.getAgent(args.agentId);
 
 	useEffect(() => {
 		client
