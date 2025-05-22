@@ -7,18 +7,18 @@ interface UseMastraClientArgs {
 	 */
 	baseUrl?: string;
 }
-export const useMastraClient = (args: UseMastraClientArgs) => {
+export const useMastraClient = (args?: UseMastraClientArgs) => {
 	return useMemo(
 		() =>
 			new MastraClient({
 				baseUrl:
-					args.baseUrl ??
+					args?.baseUrl ??
 					process.env.NEXT_PUBLIC_MASTRA_BASE_URL ??
 					"http://localhost:4111",
 				retries: 3,
 				backoffMs: 100,
 				maxBackoffMs: 5000,
 			}),
-		[args.baseUrl],
+		[args?.baseUrl],
 	);
 };
